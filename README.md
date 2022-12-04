@@ -7,3 +7,16 @@ In this project we build 2 separate chat applications, one using Asp.Net Core We
 - Asynchronous Programming in .NET (Async / Await)
 - Introduction to Dependency Injection 
 
+## SignalR Client Server
+
+### Create project
+
+<img src="/pictures/create_blazor_app.png" title="create blazor app"  width="400">
+
+### Add Nuget Packages
+```
+Install-Package Microsoft.AspNetCore.SignalR.Client
+```
+
+
+
