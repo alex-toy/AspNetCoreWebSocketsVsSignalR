@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "xuioQgPqn2IfBeOnJda7htntk3p7qrkV6OBzQXlY7BfnWgB9s8o4fbVx3zjS5LWQH29eZLZwC13XRG8PkvGogA==",
+  "success": true,
+  "projectFilePath": "C:\\source\\Csharp\\AspNetCoreWebSocketsVsSignalR\\WebSockerServer\\WebSockerServer\\WebSockerServer.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\alexe\\.nuget\\packages\\newtonsoft.json\\13.0.2\\newtonsoft.json.13.0.2.nupkg.sha512"
+  ],
+  "logs": []
+}

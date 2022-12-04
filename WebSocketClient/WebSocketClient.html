@@ -56,50 +56,87 @@
             stateLabel.innnerHTML = "Attempting to connect...";
             socket = new WebSocket(connectionUrl.value);
 
+            socket.onopen = (event) => {
+                updateState();
+                commsLog.innerHTML += '<tr><td colspan="3">Connection opened</td><tr>';
+            };
+
             socket.onclose = (event) => {
                 updateState();
-                commsLog.innnerHTML += '<tr><td colspan="3">Connection closed :' + 
-                        htmlEscape(event.code) + 'Reason : ' + 
+                commsLog.innerHTML += '<tr><td colspan="3">Connection closed :' + 
+                        htmlEscape(event.code) + ' - Reason : ' + 
                         htmlEscape(event.reason) + 
                     '</td><tr>';
             };
 
-            socket.onerror = updateState();
+            socket.onerror = () => updateState();
 
             socket.onmessage = (event) => {
-                commsLog.innnerHTML += '<tr><td>Server</td><td>Client</td><td>' + 
+                commsLog.innerHTML += '<tr><td>Server</td><td>Client</td><td>' + 
                     htmlEscape(event.data) + 
                     '</td><tr>';
+                isConnID(event.data);
             };
         };
 
+        closeButton.onclick = function(){
+            if (!socket || socket.readyState != WebSocket.OPEN){
+                alert("socket not connected")
+            }
+            socket.close(1000, "closing from client")
+        }
+
+        sendButton.onclick = function(){
+            if (!socket || socket.readyState != WebSocket.OPEN){
+                alert("socket not connected")
+            }
+            var data = constructJSON();
+            socket.send(data);
+            commsLog.innerHTML += '<tr><td>Server</td><td>Client</td><td>' + 
+                htmlEscape(data) + 
+            '</td><tr>';
+        }
+
+        function isConnID(str){
+            var prefix = str.substring(0, 7);
+            if (prefix == "ConnID:"){
+                connID.innerHTML = "ConnID: " + str.substring(8, 45);
+            }
+        }
+
+        function constructJSON(){
+            return JSON.stringify({
+                "From" : connID.innerHTML.substring(8, connID.innerHTML.length),
+                "To" : recipients.value,
+                "Message" : sendMessage.value
+            });
+        }
+
         function htmlEscape(str){
-            return str.toString()
-                .replace(/$/g, '&amp;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
+            var el = document.createElement("p");
+            el.appendChild(document.createTextNode(str));
+            return el.innerHTML;
         }
 
         function updateState() {
 
             function disable(){
-                sendMessage.disable = true;
-                sendButton.disable = true;
-                closeButton.disable = true;
-                recipients.disable = true;
+                sendMessage.disabled = true;
+                sendButton.disabled = true;
+                closeButton.disabled = true;
+                recipients.disabled = true;
             }
 
             function enable(){
-                sendMessage.disable = false;
-                sendButton.disable = false;
-                closeButton.disable = false;
-                recipients.disable = false;
+                sendMessage.disabled = false;
+                sendButton.disabled = false;
+                closeButton.disabled = false;
+                recipients.disabled = false;
             }
-            
-            connectionUrl.disable = true;
-            connectButton.disable = true;
+
+            connectionUrl.disabled = true;
+            connectButton.disabled = true;
+
             if(!socket){
                 disable();
             } else {
@@ -120,8 +157,7 @@
                         enable();
                         break;
                     default :
-                        stateLabel.innerHTML = "Unknown Socker State" + htmlEscape(socket.readyState);
-
+                        stateLabel.innerHTML = "Unknown Socket State" + htmlEscape(socket.readyState);
                 }
             }
         }

@@ -17,6 +17,8 @@ In this project we build 2 separate chat applications, one using Asp.Net Core We
 ```
 Install-Package Microsoft.AspNetCore.SignalR.Client
 ```
+In the end, we get a fully functional chat
+<img src="/pictures/chat.png" title="chat"  width="800">
 
 
 
