@@ -2,14 +2,14 @@
 <html>
     <head>
         <meta charset="utf8">
-        <title>WebSocket Javascript Client</title>
+        <title>SignalR Javascript Client</title>
     </head>
     <body>
-        <h1>WebSocket Javascript Client</h1>
+        <h1>SignalR Javascript Client</h1>
         <p id="stateLabel">Ready to connect</p>
         <p id="connIdLabel">ConnId : N\a</p>
         <div>
-            <label for="connectionUrl">WebSocket Server Url :</label>
+            <label for="connectionUrl">SignalR Server Url :</label>
             <input id="connectionUrl" />
             <button id="connectButton" type="submit">Connect</button>
             <button id="closeButton" disabled>Close Socket</button>
@@ -39,6 +39,9 @@
         </table>
         <p></p>
     </body>
+
+    <script src="/lib/signalr/dist/browser/signalr.js"></script>
+
     <script>
         var connectionUrl = document.getElementById("connectionUrl");
         var connectButton = document.getElementById("connectButton");
@@ -50,67 +53,49 @@
         var recipients = document.getElementById("recipients");
         var connID = document.getElementById("connIdLabel");
 
-        connectionUrl.value = "ws://localhost:5000"
+        connectionUrl.value = "http://localhost:5000/chathub";
+
+        var hubConnection = new signalR.HubConnectionBuilder().withUrl(connectionUrl.value).build();
 
         connectButton.onclick = () => {
             stateLabel.innnerHTML = "Attempting to connect...";
-            socket = new WebSocket(connectionUrl.value);
-
-            socket.onopen = (event) => {
+            hubConnection.start().then(() => {
                 updateState();
-                commsLog.innerHTML += '<tr><td colspan="3">Connection opened</td><tr>';
-            };
-
-            socket.onclose = (event) => {
-                updateState();
-                commsLog.innerHTML += '<tr><td colspan="3">Connection closed :' + 
-                        htmlEscape(event.code) + ' - Reason : ' + 
-                        htmlEscape(event.reason) + 
-                    '</td><tr>';
-            };
-
-            socket.onerror = () => updateState();
-
-            socket.onmessage = (event) => {
-                commsLog.innerHTML += '<tr><td>Server</td><td>Client</td><td>' + 
-                    htmlEscape(event.data) + 
-                    '</td><tr>';
-                isConnID(event.data);
-            };
+                commsLog.innerHTML += '<tr><td colspan="3" class="commslog-data">Connection opened</td><tr>';
+            });
         };
 
         closeButton.onclick = function(){
-            if (!socket || socket.readyState != WebSocket.OPEN){
-                alert("socket not connected")
+            if (!hubConnection || hubConnection.state !== "Connected"){
+                alert("hub not connected");
             }
-            socket.close(1000, "closing from client")
+
+            hubConnection.stop().then(() => {
+                console.debug("requested stop on hub");
+            });
         }
 
+        hubConnection.onclose(event => {
+            updateState();
+                commsLog.innerHTML += '<tr><td colspan="3" class="commslog-data">Connection stopped</td><tr>';
+        });
+
         sendButton.onclick = function(){
-            if (!socket || socket.readyState != WebSocket.OPEN){
-                alert("socket not connected")
-            }
-            var data = constructJSON();
-            socket.send(data);
+            var message = constructJSONPayload();
+            hubConnection.invoke("SendMessageAsync", message);
+            commsLog.innerHTML += '<tr><td>Server</td><td>Client</td><td>' + htmlEscape(message) + '</td><tr>';
+        }
+
+        hubConnection.on("ReceiveConnID", (connid) => {
+            connID.innerHTML = "ConnID : " + connid;
+            commsLog.innerHTML += '<tr><td colspan="3" class="commslog-data">Connection ID received from Hub</td><tr>';
+        });
+
+        hubConnection.on("ReceiveMessage", (message) => {
             commsLog.innerHTML += '<tr><td>Server</td><td>Client</td><td>' + 
                 htmlEscape(data) + 
             '</td><tr>';
-        }
-
-        function isConnID(str){
-            var prefix = str.substring(0, 7);
-            if (prefix == "ConnID:"){
-                connID.innerHTML = "ConnID: " + str.substring(8, 45);
-            }
-        }
-
-        function constructJSON(){
-            return JSON.stringify({
-                "From" : connID.innerHTML.substring(8, connID.innerHTML.length),
-                "To" : recipients.value,
-                "Message" : sendMessage.value
-            });
-        }
+        });
 
         function htmlEscape(str){
             var el = document.createElement("p");
@@ -118,6 +103,14 @@
             return el.innerHTML;
         }
 
+        function constructJSONPayload(){
+            return JSON.stringify({
+                "From" : connID.innerHTML.substring(8, connID.innerHTML.length),
+                "To" : recipients.value,
+                "Message" : sendMessage.value
+            });
+        }
+        
         function updateState() {
 
             function disable(){
@@ -137,31 +130,27 @@
             connectionUrl.disabled = true;
             connectButton.disabled = true;
 
-            if(!socket){
+            if(!hubConnection){
                 disable();
             } else {
-                switch (socket.readyState){
-                    case WebSocket.CLOSED :
+                switch (hubConnection){
+                    case "Disconnected" :
                         stateLabel.innerHTML = "closed";
                         connID.innerHTML = "connID : N/a";
                         disable();
                         connectionUrl.disable = false;
                         connectButton.disable = false;
                         break;
-                    case WebSocket.CONNECTING :
+                    case "Connecting":
                         stateLabel.innerHTML = "connecting...";
                         disable();
                         break;
-                    case WebSocket.CLOSING :
-                        stateLabel.innerHTML = "closing...";
-                        disable();
-                        break;
-                    case WebSocket.OPEN :
+                    case "Connected" :
                         stateLabel.innerHTML = "open";
                         enable();
                         break;
                     default :
-                        stateLabel.innerHTML = "Unknown Socket State" + htmlEscape(socket.readyState);
+                        stateLabel.innerHTML = "Unknown Socket State";
                 }
             }
         }
